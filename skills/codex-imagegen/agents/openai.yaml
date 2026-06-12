@@ -1,0 +1,5 @@
+interface:
+  display_name: "Codex ImageGen"
+  short_description: "Generate images through Codex $imagegen using subscription limits"
+  default_prompt: "Use $codex-imagegen to generate or edit the requested image through Codex built-in $imagegen, save it to an explicit output path, and avoid OpenAI API-key billing."
+
