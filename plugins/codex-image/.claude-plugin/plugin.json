@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "codex-image",
+  "displayName": "Codex Image",
+  "version": "0.1.0",
+  "description": "Generate and edit images through Codex CLI built-in imagegen",
+  "author": {
+    "name": "arkat"
+  },
+  "license": "MIT"
+}
