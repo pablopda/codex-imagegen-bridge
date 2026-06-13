@@ -34,6 +34,16 @@ python3 -m venv .venv
 pip install -e '.[test]'
 ```
 
+For a standalone CLI install from a checkout, use an isolated virtualenv and
+then verify the console entry point:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install .
+codex-imagegen --help
+```
+
 ## Standalone CLI Usage
 
 Generate a new image:
@@ -73,12 +83,25 @@ For direct local development, launch Claude Code with the plugin directory:
 claude --plugin-dir ./plugins/codex-image
 ```
 
-Install from this repository as a local marketplace:
+Install from this repository as a local marketplace inside Claude Code:
 
 ```text
 /plugin marketplace add ~/soft/codex-imagegen-bridge
 /plugin install codex-image@codex-imagegen-bridge
 ```
+
+The equivalent non-interactive Claude CLI commands from the repository root are:
+
+```bash
+claude plugin validate --strict .
+claude plugin validate --strict plugins/codex-image
+claude plugin marketplace add ./.
+claude plugin install codex-image@codex-imagegen-bridge --scope local
+claude plugin details codex-image
+```
+
+Use `./.` for the relative marketplace path. The installed Claude CLI rejects a
+bare `.` source.
 
 Then invoke:
 
@@ -176,7 +199,29 @@ $codex-imagegen generate a square icon for...
 
 ```bash
 python3 -m py_compile src/codex_imagegen_bridge/*.py scripts/doctor plugins/codex-image/scripts/codex-imagegen plugins/codex-image/scripts/doctor
+python3 -m json.tool .claude-plugin/marketplace.json >/dev/null
+python3 -m json.tool plugins/codex-image/.claude-plugin/plugin.json >/dev/null
 python3 -m pytest -q
+scripts/doctor
+plugins/codex-image/scripts/doctor
+```
+
+When Claude Code is installed, also verify plugin packaging:
+
+```bash
+claude plugin validate --strict .
+claude plugin validate --strict plugins/codex-image
+```
+
+To test marketplace installation without touching your normal Claude Code
+settings, run it with a temporary home directory:
+
+```bash
+tmp_home="$(mktemp -d)"
+HOME="$tmp_home" claude plugin marketplace add ./.
+HOME="$tmp_home" claude plugin install codex-image@codex-imagegen-bridge --scope local
+HOME="$tmp_home" claude plugin details codex-image
+rm -rf "$tmp_home"
 ```
 
 Optional isolated packaging smoke test:

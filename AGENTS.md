@@ -11,8 +11,12 @@ from direct OpenAI API-key billing.
 Run these checks before handing off code changes:
 
 ```bash
-python3 -m py_compile src/codex_imagegen_bridge/*.py
+python3 -m py_compile src/codex_imagegen_bridge/*.py scripts/doctor plugins/codex-image/scripts/codex-imagegen plugins/codex-image/scripts/doctor
+python3 -m json.tool .claude-plugin/marketplace.json >/dev/null
+python3 -m json.tool plugins/codex-image/.claude-plugin/plugin.json >/dev/null
 python3 -m pytest -q
+scripts/doctor
+plugins/codex-image/scripts/doctor
 ```
 
 For an isolated packaging smoke test:
@@ -34,11 +38,13 @@ codex-imagegen --help
 - Prefer focused tests that verify command construction and safety behavior
   without spending Codex quota.
 
-## Current Priorities
+## Release Priorities
 
-The PRD describes the production target. The next useful work is:
+The PRD describes the production target. Before tagging `v0.1.0`, keep work
+focused on:
 
-1. Add `scripts/doctor` for Codex CLI/login diagnostics.
-2. Improve `--dry-run` output to include command, prompt, and stripped env vars.
-3. Add Claude Code plugin packaging under `plugins/codex-image/`.
-4. Add local marketplace metadata and layout validation tests.
+1. Installability through the standalone CLI, Claude Code plugin, and local
+   marketplace paths.
+2. Diagnostics and tests that do not invoke `$imagegen` or spend image quota.
+3. Documentation that accurately reflects the installed `claude plugin` CLI.
+4. Optional live smoke testing only after explicit user approval.

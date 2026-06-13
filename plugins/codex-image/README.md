@@ -28,9 +28,21 @@ Then invoke the skill inside Claude Code:
 From this repository as a local marketplace:
 
 ```text
-/plugin marketplace add .
+/plugin marketplace add ./.
 /plugin install codex-image@codex-imagegen-bridge
 ```
+
+The equivalent Claude CLI commands from the repository root are:
+
+```bash
+claude plugin validate --strict plugins/codex-image
+claude plugin marketplace add ./.
+claude plugin install codex-image@codex-imagegen-bridge --scope local
+claude plugin details codex-image
+```
+
+Use `./.` for the relative marketplace path. The installed Claude CLI rejects a
+bare `.` source.
 
 After installation, invoke:
 

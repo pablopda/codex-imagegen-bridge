@@ -222,3 +222,16 @@ def test_plugin_doctor_fails_if_sibling_bridge_is_missing(tmp_path: Path) -> Non
 
     assert result.returncode == 1
     assert "bridge script was not found" in result.stdout
+
+
+def test_docs_use_verified_relative_marketplace_path() -> None:
+    docs = [
+        ROOT / "README.md",
+        PLUGIN / "README.md",
+        ROOT / "RELEASE.md",
+    ]
+
+    for path in docs:
+        text = path.read_text(encoding="utf-8")
+        assert "claude plugin marketplace add ./." in text or "/plugin marketplace add ./." in text or "<repo-path>" in text
+        assert "plugin marketplace add ." not in text.replace("plugin marketplace add ./.", "")
