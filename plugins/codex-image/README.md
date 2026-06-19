@@ -25,15 +25,15 @@ Then invoke the skill inside Claude Code:
 
 ## Local Marketplace Install
 
-From this repository as a local marketplace:
+Install from the public GitHub repository as a Claude Code marketplace:
 
 ```text
-/plugin marketplace add ./.
+/plugin marketplace add https://github.com/pablopda/codex-imagegen-bridge.git
 /plugin install codex-image@codex-imagegen-bridge
 /reload-plugins
 ```
 
-The equivalent Claude CLI commands from the repository root are:
+For local development, the equivalent Claude CLI commands from the repository root are:
 
 ```bash
 claude plugin validate --strict plugins/codex-image

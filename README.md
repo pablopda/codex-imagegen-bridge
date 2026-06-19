@@ -89,15 +89,15 @@ For direct local development, launch Claude Code with the plugin directory:
 claude --plugin-dir ./plugins/codex-image
 ```
 
-Install from this repository as a local marketplace inside Claude Code:
+Install from the public GitHub repository as a Claude Code marketplace:
 
 ```text
-/plugin marketplace add /path/to/codex-imagegen-bridge
+/plugin marketplace add https://github.com/pablopda/codex-imagegen-bridge.git
 /plugin install codex-image@codex-imagegen-bridge
 /reload-plugins
 ```
 
-The equivalent non-interactive Claude CLI commands from the repository root are:
+For local development, the equivalent non-interactive Claude CLI commands from the repository root are:
 
 ```bash
 claude plugin validate --strict .
