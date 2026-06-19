@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -58,6 +59,7 @@ def test_build_codex_command_attaches_references_in_exact_order(tmp_path: Path) 
         "--ephemeral",
         "--image",
         str(ref.resolve()),
+        "--",
         "PROMPT",
     ]
 
@@ -73,7 +75,7 @@ def test_build_codex_command_attaches_multiple_references(tmp_path: Path) -> Non
 
     cmd = cli.build_codex_command(args, "PROMPT", tmp_path)
 
-    assert cmd[-5:] == ["--image", str(refs[0].resolve()), "--image", str(refs[1].resolve()), "PROMPT"]
+    assert cmd[-6:] == ["--image", str(refs[0].resolve()), "--image", str(refs[1].resolve()), "--", "PROMPT"]
 
 
 def test_clean_env_strips_api_keys(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -281,6 +283,16 @@ def test_missing_reference_fails_before_codex_call(tmp_path: Path, monkeypatch: 
         cli.validate_args(args)
 
 
+def test_non_image_reference_fails_before_codex_call(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
+    ref = tmp_path / "secret.txt"
+    ref.write_text("not an image", encoding="utf-8")
+    args = cli.parse_args(["-p", "x", "-f", str(tmp_path / "out.png"), "-i", str(ref)])
+
+    with pytest.raises(SystemExit, match="supported image extension"):
+        cli.validate_args(args)
+
+
 def test_validate_returns_absolute_output_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
     args = cli.parse_args(["-p", "x", "-f", str(tmp_path / "nested/out.png")])
@@ -290,3 +302,68 @@ def test_validate_returns_absolute_output_path(tmp_path: Path, monkeypatch: pyte
     assert output_path.is_absolute()
     assert output_path == (tmp_path / "nested/out.png").resolve()
     assert output_dir == output_path.parent
+
+
+def test_validate_rejects_output_parent_that_is_not_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
+    parent = tmp_path / "not-a-dir"
+    parent.write_text("file", encoding="utf-8")
+    args = cli.parse_args(["-p", "x", "-f", str(parent / "out.png")])
+
+    with pytest.raises(SystemExit, match="output parent is not a directory"):
+        cli.validate_args(args)
+
+
+def test_main_force_removes_existing_output_before_running_codex(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
+    out = tmp_path / "out.png"
+    out.write_bytes(b"stale")
+
+    def fake_run(cmd: list[str], check: bool, env: dict[str, str]) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    rc = cli.main(["-p", "a moon poster", "-f", str(out), "--force"])
+
+    assert rc == 1
+    assert not out.exists()
+    assert "output file was not created" in capsys.readouterr().err
+
+
+def test_main_returns_nonzero_when_output_is_empty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
+    out = tmp_path / "empty.png"
+
+    def fake_run(cmd: list[str], check: bool, env: dict[str, str]) -> subprocess.CompletedProcess[bytes]:
+        out.write_bytes(b"")
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    rc = cli.main(["-p", "a moon poster", "-f", str(out)])
+
+    assert rc == 1
+    assert "output file is empty" in capsys.readouterr().err
+
+
+def test_main_json_prints_machine_readable_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(cli.shutil, "which", lambda name: "/usr/bin/codex")
+    out = tmp_path / "out.png"
+
+    def fake_run(cmd: list[str], check: bool, env: dict[str, str]) -> subprocess.CompletedProcess[bytes]:
+        out.write_bytes(b"image")
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    rc = cli.main(["-p", "a moon poster", "-f", str(out), "--json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload == {"type": "codex-imagegen-result", "path": str(out.resolve())}

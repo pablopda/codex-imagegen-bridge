@@ -38,13 +38,13 @@ codex-imagegen --help
 - Prefer focused tests that verify command construction and safety behavior
   without spending Codex quota.
 
-## Release Priorities
+## Current Priorities
 
-The PRD describes the production target. Before tagging `v0.1.0`, keep work
-focused on:
+The PRD describes the production target. After `v0.1.0`, keep work focused on:
 
 1. Installability through the standalone CLI, Claude Code plugin, and local
    marketplace paths.
 2. Diagnostics and tests that do not invoke `$imagegen` or spend image quota.
 3. Documentation that accurately reflects the installed `claude plugin` CLI.
 4. Optional live smoke testing only after explicit user approval.
+5. Regression fixes that preserve the default API-key stripping behavior.

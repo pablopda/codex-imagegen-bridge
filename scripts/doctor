@@ -121,9 +121,13 @@ def main(argv: list[str] | None = None) -> int:
     output_dir = (args.output_dir or Path(tempfile.gettempdir()) / "codex-imagegen-bridge-doctor").expanduser().resolve()
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-        test_file = output_dir / ".write-test"
-        test_file.write_text("ok", encoding="utf-8")
-        test_file.unlink()
+        fd, test_name = tempfile.mkstemp(prefix=".write-test-", dir=output_dir)
+        test_file = Path(test_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as writable_probe:
+                writable_probe.write("ok")
+        finally:
+            test_file.unlink(missing_ok=True)
     except OSError as exc:
         report("fail", f"output directory is not writable: {output_dir} ({exc})")
         failures += 1

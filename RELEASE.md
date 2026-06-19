@@ -1,5 +1,18 @@
 # Release Notes
 
+## 0.1.2 - 2026-06-19
+
+### Fixed
+
+- Treat `--force` runs as successful only when Codex creates a new non-empty output file.
+- Reject non-image reference file extensions before invoking Codex.
+- Print a machine-readable final result line when `--json` is used.
+- Avoid fixed-name doctor writability probes that could follow a pre-existing `.write-test` symlink.
+- Clarify Claude Code plugin reload and isolated local marketplace install instructions.
+- Build Python artifacts, smoke-test the wheel, and validate/install the Claude plugin in CI.
+- Allow Claude to invoke the Codex Image skill when the user explicitly requests image generation, instead of limiting it to manual slash-command use.
+- Fix reference-image runs by terminating Codex CLI option parsing before the generated prompt, since `codex exec --image` accepts variadic image paths.
+
 ## 0.1.0 - 2026-06-13
 
 Initial production-readiness release for the Codex ImageGen Bridge.
@@ -39,6 +52,7 @@ Initial production-readiness release for the Codex ImageGen Bridge.
 - [ ] `python3 -m json.tool .claude-plugin/marketplace.json >/dev/null`
 - [ ] `python3 -m json.tool plugins/codex-image/.claude-plugin/plugin.json >/dev/null`
 - [ ] `python3 -m pytest -q`
+- [ ] `python3 -m build`
 - [ ] `codex-imagegen --help`
 - [ ] `plugins/codex-image/scripts/codex-imagegen -p "A moon poster" -f outputs/moon.png --dry-run`
 - [ ] `scripts/doctor`
@@ -47,14 +61,20 @@ Initial production-readiness release for the Codex ImageGen Bridge.
 - [ ] `claude plugin validate --strict plugins/codex-image` when Claude Code is installed.
 - [ ] Install local marketplace with `/plugin marketplace add <repo-path>` or `claude plugin marketplace add ./.`.
 - [ ] Install plugin with `/plugin install codex-image@codex-imagegen-bridge`.
+- [ ] Restart Claude Code or run `/reload-plugins`.
 - [ ] Confirm `/codex-image:generate` is available in Claude Code.
 - [ ] For a no-side-effect marketplace install check, run the commands below from the repository root:
   ```bash
   tmp_home="$(mktemp -d)"
-  HOME="$tmp_home" claude plugin marketplace add ./.
-  HOME="$tmp_home" claude plugin install codex-image@codex-imagegen-bridge --scope local
-  HOME="$tmp_home" claude plugin details codex-image
-  rm -rf "$tmp_home"
+  tmp_repo="$(mktemp -d)"
+  cp -a . "$tmp_repo/repo"
+  (
+    cd "$tmp_repo/repo"
+    HOME="$tmp_home" claude plugin marketplace add ./.
+    HOME="$tmp_home" claude plugin install codex-image@codex-imagegen-bridge --scope local
+    HOME="$tmp_home" claude plugin details codex-image
+  )
+  rm -rf "$tmp_home" "$tmp_repo"
   ```
 - [ ] Optional live smoke only when quota use is approved: `codex-imagegen -p "Small blue circle icon" -f outputs/smoke.png --size square --quality low` and verify `outputs/smoke.png` exists and is non-empty.
 - [ ] Tag the release and verify install from a clean clone or plugin cache.

@@ -1,12 +1,11 @@
 ---
 description: Generate or edit one raster image through local Codex CLI $imagegen and save it to a requested path. Use only when the user explicitly asks to create, generate, edit, restyle, or save an image asset via Codex.
-disable-model-invocation: true
 argument-hint: "[image request and output path]"
 ---
 
 # Generate Images Through Codex
 
-Use this skill when the user explicitly invokes `/codex-image:generate` to generate a new raster image or edit/restyle an existing image by delegating to the local Codex CLI built-in `$imagegen` capability.
+Use this skill when the user explicitly invokes `/codex-image:generate` or asks Claude to use Codex Image to generate a new raster image or edit/restyle an existing image by delegating to the local Codex CLI built-in `$imagegen` capability.
 
 ## Invocation Input
 

@@ -2,10 +2,10 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "codex-imagegen-bridge",
   "owner": {
-    "name": "arkat"
+    "name": "pablopda"
   },
   "description": "Claude Code plugins for Codex-backed image generation",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "plugins": [
     {
       "name": "codex-image",

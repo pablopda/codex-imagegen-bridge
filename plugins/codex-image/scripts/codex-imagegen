@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shlex
 import shutil
@@ -10,10 +11,31 @@ import sys
 from pathlib import Path
 
 API_KEY_ENV_VARS = ("OPENAI_API_KEY", "CODEX_API_KEY")
+REFERENCE_IMAGE_EXTENSIONS = (
+    ".avif",
+    ".bmp",
+    ".gif",
+    ".heic",
+    ".heif",
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".tif",
+    ".tiff",
+    ".webp",
+)
 
 
 def normalize_reference_path(ref: Path) -> Path:
     return ref.expanduser().resolve()
+
+
+def supported_reference_extensions() -> str:
+    return ", ".join(REFERENCE_IMAGE_EXTENSIONS)
+
+
+def is_supported_reference_image(path: Path) -> bool:
+    return path.suffix.lower() in REFERENCE_IMAGE_EXTENSIONS
 
 
 def resolve_codex_bin(codex_bin: str) -> str | None:
@@ -74,6 +96,7 @@ def build_codex_command(args: argparse.Namespace, prompt: str, output_dir: Path)
     for ref in args.reference or []:
         cmd.extend(["--image", str(normalize_reference_path(ref))])
 
+    cmd.append("--")
     cmd.append(prompt)
     return cmd
 
@@ -139,6 +162,11 @@ def validate_args(args: argparse.Namespace) -> tuple[Path, Path]:
         normalized_ref = normalize_reference_path(ref)
         if not normalized_ref.is_file():
             raise SystemExit(f"error: reference image not found: {ref}")
+        if not is_supported_reference_image(normalized_ref):
+            raise SystemExit(
+                "error: reference image must use a supported image extension "
+                f"({supported_reference_extensions()}): {ref}"
+            )
         normalized_refs.append(normalized_ref)
     args.reference = normalized_refs
 
@@ -147,6 +175,8 @@ def validate_args(args: argparse.Namespace) -> tuple[Path, Path]:
         raise SystemExit(f"error: output file exists, pass --force to overwrite: {output_path}")
 
     output_dir = output_path.parent
+    if output_dir.exists() and not output_dir.is_dir():
+        raise SystemExit(f"error: output parent is not a directory: {output_dir}")
     if args.sandbox == "read-only" and not args.dry_run:
         raise SystemExit("error: read-only sandbox cannot write the output image")
 
@@ -186,7 +216,22 @@ def main(argv: list[str] | None = None) -> int:
         print_dry_run(cmd, prompt, args.allow_api_env)
         return 0
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"error: output directory could not be created: {output_dir} ({exc})", file=sys.stderr)
+        return 1
+
+    if args.force and output_path.exists():
+        if not output_path.is_file():
+            print(f"error: output path exists but is not a file: {output_path}", file=sys.stderr)
+            return 1
+        try:
+            output_path.unlink()
+        except OSError as exc:
+            print(f"error: existing output file could not be removed: {output_path} ({exc})", file=sys.stderr)
+            return 1
+
     if args.verbose:
         print(f"codex-imagegen: running {render_command(cmd[:-1] + ['<generated prompt>'])}", file=sys.stderr)
         stripped = ", ".join(stripped_env_vars(args.allow_api_env)) or "none"
@@ -203,7 +248,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: codex completed but output file was not created: {output_path}", file=sys.stderr)
         return 1
 
-    print(output_path)
+    try:
+        output_size = output_path.stat().st_size
+    except OSError as exc:
+        print(f"error: output file could not be inspected: {output_path} ({exc})", file=sys.stderr)
+        return 1
+    if output_size == 0:
+        print(f"error: codex completed but output file is empty: {output_path}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps({"type": "codex-imagegen-result", "path": str(output_path)}))
+    else:
+        print(output_path)
     return 0
 
 

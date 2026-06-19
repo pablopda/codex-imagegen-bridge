@@ -31,3 +31,38 @@ jobs:
         run: codex-imagegen --help
       - name: Run tests
         run: python3 -m pytest -q
+      - name: Build Python artifacts
+        run: python3 -m build
+      - name: Wheel smoke test
+        run: |
+          tmp_dir="$(mktemp -d)"
+          python3 -m venv "$tmp_dir/venv"
+          "$tmp_dir/venv/bin/python" -m pip install dist/*.whl
+          "$tmp_dir/venv/bin/codex-imagegen" --help
+
+  claude-plugin:
+    name: Claude plugin packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Validate Claude plugin manifests
+        run: |
+          claude plugin validate --strict .
+          claude plugin validate --strict plugins/codex-image
+      - name: Isolated marketplace install
+        run: |
+          tmp_home="$(mktemp -d)"
+          tmp_repo="$(mktemp -d)"
+          trap 'rm -rf "$tmp_home" "$tmp_repo"' EXIT
+          cp -a . "$tmp_repo/repo"
+          (
+            cd "$tmp_repo/repo"
+            HOME="$tmp_home" claude plugin marketplace add ./.
+            HOME="$tmp_home" claude plugin install codex-image@codex-imagegen-bridge --scope local
+            HOME="$tmp_home" claude plugin details codex-image
+          )

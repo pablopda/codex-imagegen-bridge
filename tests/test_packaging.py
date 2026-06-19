@@ -45,7 +45,8 @@ def test_marketplace_points_to_local_plugin_with_current_schema_fields() -> None
     marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
 
     assert marketplace["name"] == "codex-imagegen-bridge"
-    assert marketplace["owner"] == {"name": "arkat"}
+    assert marketplace["owner"] == {"name": "pablopda"}
+    assert marketplace["version"] == "0.1.2"
     assert marketplace["description"]
     assert marketplace["plugins"] == [
         {
@@ -62,9 +63,9 @@ def test_plugin_metadata_uses_current_schema_and_default_skill_discovery() -> No
 
     assert metadata["name"] == "codex-image"
     assert metadata["displayName"] == "Codex Image"
-    assert metadata["version"] == "0.1.0"
+    assert metadata["version"] == "0.1.2"
     assert metadata["description"]
-    assert metadata["author"] == {"name": "arkat"}
+    assert metadata["author"] == {"name": "pablopda"}
     assert metadata["license"] == "MIT"
     assert "skills" not in metadata
 
@@ -74,7 +75,7 @@ def test_skill_frontmatter_and_plugin_root_script_paths() -> None:
 
     assert skill.startswith("---\n")
     assert "description:" in skill.split("---", 2)[1]
-    assert "disable-model-invocation: true" in skill.split("---", 2)[1]
+    assert "disable-model-invocation" not in skill.split("---", 2)[1]
     assert "$ARGUMENTS" in skill
     assert "${CLAUDE_PLUGIN_ROOT}/scripts/codex-imagegen" in skill
     assert "scripts/codex-imagegen -p" not in skill
@@ -177,6 +178,31 @@ def test_doctor_uses_bridge_dry_run_without_image_generation(tmp_path: Path) -> 
     assert "unexpected" not in result.stderr
 
 
+def test_doctor_writability_probe_does_not_follow_fixed_symlink(tmp_path: Path) -> None:
+    fake_codex = tmp_path / "codex"
+    write_fake_codex(fake_codex)
+
+    for index, doctor in enumerate([ROOT / "scripts/doctor", PLUGIN / "scripts/doctor"]):
+        out = tmp_path / f"out-{index}"
+        out.mkdir()
+        victim = tmp_path / f"victim-{index}.txt"
+        victim.write_text("original", encoding="utf-8")
+        fixed_probe = out / ".write-test"
+        fixed_probe.symlink_to(victim)
+
+        result = subprocess.run(
+            [str(doctor), "--codex-bin", str(fake_codex), "--output-dir", str(out)],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        assert result.returncode == 0, result.stderr + result.stdout
+        assert victim.read_text(encoding="utf-8") == "original"
+        assert fixed_probe.is_symlink()
+
+
 def test_doctor_auth_status_rejects_negative_auth_output() -> None:
     for path in [ROOT / "scripts/doctor", PLUGIN / "scripts/doctor"]:
         ns = runpy.run_path(str(path))
@@ -235,3 +261,23 @@ def test_docs_use_verified_relative_marketplace_path() -> None:
         text = path.read_text(encoding="utf-8")
         assert "claude plugin marketplace add ./." in text or "/plugin marketplace add ./." in text or "<repo-path>" in text
         assert "plugin marketplace add ." not in text.replace("plugin marketplace add ./.", "")
+
+
+def test_docs_include_plugin_reload_and_isolated_install_copy() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    plugin_readme = (PLUGIN / "README.md").read_text(encoding="utf-8")
+    release = (ROOT / "RELEASE.md").read_text(encoding="utf-8")
+
+    assert "/reload-plugins" in readme
+    assert "/reload-plugins" in plugin_readme
+    assert "tmp_repo" in readme
+    assert "cp -a . \"$tmp_repo/repo\"" in readme
+    assert "tmp_repo" in release
+    assert "cp -a . \"$tmp_repo/repo\"" in release
+    assert "spend image-generation quota" in plugin_readme
+
+
+def test_agents_release_priorities_do_not_reference_pretag_v0_1_0() -> None:
+    text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert "Before tagging `v0.1.0`" not in text

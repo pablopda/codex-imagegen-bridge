@@ -1,6 +1,6 @@
 # Codex Image Claude Code Plugin
 
-This plugin exposes `/codex-image:generate`, a Claude Code skill for generating or editing one raster image through the local Codex CLI built-in `$imagegen` flow.
+This plugin exposes `/codex-image:generate`, a Claude Code skill for generating or editing one raster image through the local Codex CLI built-in `$imagegen` flow. Claude can invoke the skill when the user explicitly asks for Codex Image generation, and users can also run the slash command directly.
 
 ## Requirements
 
@@ -30,6 +30,7 @@ From this repository as a local marketplace:
 ```text
 /plugin marketplace add ./.
 /plugin install codex-image@codex-imagegen-bridge
+/reload-plugins
 ```
 
 The equivalent Claude CLI commands from the repository root are:
@@ -42,7 +43,8 @@ claude plugin details codex-image
 ```
 
 Use `./.` for the relative marketplace path. The installed Claude CLI rejects a
-bare `.` source.
+bare `.` source. Restart Claude Code, or run `/reload-plugins` in the active
+session, before invoking a newly installed plugin command.
 
 After installation, invoke:
 
@@ -50,11 +52,16 @@ After installation, invoke:
 /codex-image:generate Restyle logo.png as a minimal app icon and save to outputs/logo-icon.png
 ```
 
-## Development Commands From This Plugin Directory
+## Safe Development Commands From This Plugin Directory
 
 ```bash
 scripts/doctor
 scripts/codex-imagegen -p "A moon poster" -f outputs/moon.png --dry-run
+```
+
+Run live generation only when you explicitly accept that it can spend image-generation quota:
+
+```bash
 scripts/codex-imagegen -p "A square app icon, teal and white, no text" -f outputs/icon.png --size square --quality high
 scripts/codex-imagegen -p "Restyle this logo as a minimal app icon" -i logo.png -f outputs/logo-icon.png
 ```
@@ -81,5 +88,6 @@ Common errors:
 - `codex login status failed`: run `codex login`, then prefer ChatGPT sign-in for quota-backed usage.
 - `auth type was not detectable`: inspect `codex login status` output and confirm the desired auth path.
 - `output file exists`: pass `--force` only if replacing the file is intentional.
-- `reference image not found`: verify each `-i/--reference` path exists.
+- `reference image not found`: verify each `-i/--reference` path exists and has a supported image extension.
 - `output file was not created`: inspect Codex output, permissions, and the requested save path.
+- `output file is empty`: inspect Codex output and retry; empty files are treated as failed generation.

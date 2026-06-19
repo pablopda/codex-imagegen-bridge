@@ -10,6 +10,7 @@ Security fixes are provided for the latest released version of this project.
 - The bridge does not print full environment dumps, access tokens, or API keys.
 - `OPENAI_API_KEY` and `CODEX_API_KEY` are removed from the `codex exec` subprocess environment by default.
 - `--allow-api-env` is an explicit escape hatch for users who intentionally want API-key-backed Codex execution.
+- This is not full process isolation: `codex exec` still inherits other environment variables from the invoking shell.
 - The default Codex sandbox is `workspace-write`; avoid `danger-full-access` unless you have a separate reason and understand the risk.
 - Tests and diagnostics are designed not to call `$imagegen` or spend image-generation quota.
 
